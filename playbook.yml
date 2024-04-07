@@ -1,0 +1,71 @@
+---
+- name: Kali Linux Vagrant Provisioner
+  hosts: all
+  remote_user: vagrant
+  become: yes
+  become_method: sudo
+  
+  tasks:
+    - name: Install Miniconda
+      block:
+      - name: Make miniconda directory
+        ansible.builtin.file:
+          path: ~/miniconda3
+          state: directory
+          mode: 0755
+      - name: Download miniconda
+        ansible.builtin.get_url:
+          url: https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+          dest: ~/miniconda3/miniconda.sh
+          mode: 0550
+      - name: Install miniconda
+        ansible.builtin.shell: bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+      - name: Remove the installer
+        ansible.builtin.file:
+          path: ~/miniconda3/miniconda.sh
+          state: absent
+      - name: Init bash
+        ansible.builtin.shell: ~/miniconda3/bin/conda init bash
+      - name: Init zsh
+        ansible.builtin.shell: ~/miniconda3/bin/conda init zsh
+    - name: Install Tools
+      block:
+      - name: apt install
+        apt:
+          name: "{{ item }}"
+          update_cache: true
+        loop:
+          - keepassxc
+    - name: Configure Tor Whonix Gateway
+      block:
+      - name: Establish connections
+        ansible.builtin.shell: sudo nmcli connection add con-name whonix ifname eth1 type ethernet autoconnect yes ipv4.addresses 10.152.152.12/18 ipv4.gateway 10.152.152.10 ipv4.method manual
+      - name: Add nameserver to resolver
+        ansible.builtin.shell: sudo sed -i '$a nameserver 10.152.152.10' /etc/resolv.conf
+      - name: Start connection
+        ansible.builtin.shell: sudo nmcli connection up whonix
+      - name: Report active connections
+        ansible.builtin.shell: sudo nmcli connection show --active
+      - name: Report status
+        ansible.builtin.shell: sudo nmcli device status
+    #- name: Copy worker.kdbx
+    #  ansible.builtin.copy:
+    #    src: ./worker.kdbx
+    #    dest: /home/vagrant/worker.kdbx
+    #    owner: vagrant
+    #    mode: '0644'
+    #- name: Copy load_worker_ssh.sh
+    #  ansible.builtin.copy:
+    #    src: ./load_worker_ssh.sh
+    #    dest: /home/vagrant/load_worker_ssh.sh
+    #    owner: vagrant
+    #    mode: preserve
+    - name: Copy eth0_down.sh
+      ansible.builtin.copy:
+        src: ./eth0_down.sh
+        dest: /home/vagrant/eth0_down.sh
+        owner: vagrant
+        mode: preserve
+        
+        
+        

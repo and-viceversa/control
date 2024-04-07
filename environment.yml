@@ -1,0 +1,4 @@
+name: collect
+dependencies:
+  - conda-forge::ansible
+  - git
