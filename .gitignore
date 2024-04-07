@@ -3,6 +3,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Vagrant
+vagrant.d/
+.vagrant/
+
 # C extensions
 *.so
 
