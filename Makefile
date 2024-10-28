@@ -56,7 +56,7 @@ install_whonix: install_software
 	VBoxManage setextradata global GUI/SuppressMessages confirmGoingFullscreen,remindAboutMouseIntegration,remindAboutAutoCapture
 	# Install Whonix VM
 	curl --tlsv1.3 --output whonix-xfce-installer-cli --url https://www.whonix.org/dist-installer-cli
-	printf '%s\n' N | bash ./whonix-xfce-installer-cli -n -k
+	printf '%s\n' N | bash ./whonix-xfce-installer-cli -n -k --allow-errors
 	# Disable Audio
 	VBoxManage modifyvm Whonix-Gateway-Xfce --audio none
 	VBoxManage modifyvm Whonix-Workstation-Xfce --audio none
