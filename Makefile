@@ -3,7 +3,7 @@ all: update install_software install_conda build_conda_env install_whonix instal
 SHELL=/bin/bash
 CONDA_ACTIVATE=source $$HOME/miniforge/etc/profile.d/conda.sh; conda activate; conda activate
 
-APT = vagrant virtualbox virtualbox-ext-pack virtualbox-guest-x11 linux-headers-generic keepassxc wget curl
+APT = vagrant virtualbox virtualbox-ext-pack virtualbox-guest-x11 linux-headers-generic keepassxc wget curl debconf-utils
 
 CONDA_URL = https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
 CONDA_FILE = $$HOME/miniforge/miniforge.sh
@@ -16,11 +16,12 @@ update:
 .PHONY: register_vagrant
 register_vagrant:
 	wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --yes --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg; \
-	echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+	echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $$(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
 
 .PHONY: install_software
 install_software: register_vagrant
 	# Install Software
+	@echo virtualbox-ext-pack virtualbox-ext-pack/license select true | sudo debconf-set-selections
 	sudo apt -y update && sudo apt -y install $(APT)
 	sudo snap install pycharm-community --classic
 
