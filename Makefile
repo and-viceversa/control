@@ -1,61 +1,61 @@
 all: update install_software install_conda build_conda_env install_whonix install_kali
 
 SHELL=/bin/bash
-CONDA_ACTIVATE=source ~/miniconda3/etc/profile.d/conda.sh ; conda activate ; conda activate
+CONDA_ACTIVATE=source $$HOME/miniforge/etc/profile.d/conda.sh; conda activate; conda activate
 
-WHONIX_URL = https://download.whonix.org/ova/17.1.3.1/
-WHONIX_FILE = Whonix-Xfce-17.1.3.1.ova
+APT = vagrant virtualbox virtualbox-ext-pack virtualbox-guest-x11 linux-headers-generic keepassxc wget curl
 
-CONDA_URL = https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-CONDA_FILE = ~/miniconda3/miniconda.sh
+CONDA_URL = https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
+CONDA_FILE = $$HOME/miniforge/miniforge.sh
 
 .PHONY: update
 update:
 	# Update Ubuntu
-	sudo apt update && sudo apt -y upgrade
+	sudo apt -y update && sudo apt -y upgrade
+
+.PHONY: register_vagrant
+register_vagrant:
+	wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --yes --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg; \
+	echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
 
 .PHONY: install_software
-install_software:
+install_software: register_vagrant
 	# Install Software
-	sudo apt -y install vagrant virtualbox virtualbox-ext-pack virtualbox-guest-x11 keepassxc wget
+	sudo apt -y update && sudo apt -y install $(APT)
 	sudo snap install pycharm-community --classic
 
 .PHONY: install_conda
 install_conda:
 	# Install Conda
-	mkdir -p ~/miniconda3 ; \
+	mkdir -p $$HOME/miniforge; \
 	if [ -e $(CONDA_FILE) ]; then \
 		echo "Already downloaded"; \
 	else \
-		wget $(CONDA_URL) -O $(CONDA_FILE) ; \
+		wget $(CONDA_URL) -O $(CONDA_FILE); \
 	fi
-	bash $(CONDA_FILE) -b -u -p ~/miniconda3 ; \
-	# rm -rf ~/miniconda3/miniconda.sh
-	~/miniconda3/bin/conda init bash
-	~/miniconda3/bin/conda init zsh
+	bash $(CONDA_FILE) -b -u -p $$HOME/miniforge
+	@$(CONDA_ACTIVATE) base; \
+	conda init --all; \
+	conda update -q -y -n base -c conda-forge conda
 
 .PHONY: conda_clean
 conda_clean:
 	# Clean existing conda env
-	@$(CONDA_ACTIVATE) base ; \
+	@-$(CONDA_ACTIVATE) base; \
 	conda env remove -y -n collect
 
 .PHONY: build_conda_env
 build_conda_env: conda_clean
 	# Build conda env
-	@$(CONDA_ACTIVATE) base ; \
-	conda env create -y -f environment.yml
+	@$(CONDA_ACTIVATE) base; \
+	conda env create -y --file=environment.yml
 
 .PHONY: install_whonix
 install_whonix: install_software
 	VBoxManage setextradata global GUI/SuppressMessages confirmGoingFullscreen,remindAboutMouseIntegration,remindAboutAutoCapture
 	# Install Whonix VM
-	if [ -e $(WHONIX_FILE) ]; then \
-		echo "Already downloaded"; \
-	else \
-		wget $(WHONIX_URL)$(WHONIX_FILE); \
-	fi
-	VBoxManage import Whonix-Xfce-17.1.3.1.ova --vsys 0 --eula=accept --vsys 1 --eula=accept
+	curl --tlsv1.3 --output whonix-xfce-installer-cli --url https://www.whonix.org/dist-installer-cli
+	printf '%s\n' N | bash ./whonix-xfce-installer-cli -n -k
 	# Disable Audio
 	VBoxManage modifyvm Whonix-Gateway-Xfce --audio none
 	VBoxManage modifyvm Whonix-Workstation-Xfce --audio none
@@ -81,28 +81,28 @@ install_whonix: install_software
 .PHONY: install_kali
 install_kali: install_software install_conda build_conda_env
 	# Install Kali VM
-	@$(CONDA_ACTIVATE) collect ; \
+	@$(CONDA_ACTIVATE) collect; \
 	vagrant up
 	#vagrant ssh -- -t 'sudo ip link set eth0 down; /bin/bash' &
 
 .PHONY: conda_nuke
 conda_nuke:
 	# Nuke conda
-	@$(CONDA_ACTIVATE) base ; \
-	conda init --reverse --all ; \
-	rm -rf anaconda3 ; \
-	rm -rf ~/anaconda3 ; \
-	rm -rf ~/opt/anaconda3 ; \
-	rm -rf ~/miniconda3
+	@$(CONDA_ACTIVATE) base; \
+	conda init --reverse --all; \
+	rm -rf anaconda3; \
+	rm -rf $$HOME/anaconda3; \
+	rm -rf $$HOME/opt/anaconda3; \
+	rm -rf $$HOME/miniforge
 
 .PHONY: vm_nuke
 vm_nuke:
 	# Nuke VMs
-	VBoxManage controlvm Whonix-Gateway-Xfce poweroff ; \
-	VBoxManage controlvm Whonix-Workstation-Xfce poweroff ; \
-	VBoxManage controlvm kali_over_tor poweroff ; \
-	VBoxManage unregistervm Whonix-Gateway-Xfce --delete ; \
-	VBoxManage unregistervm Whonix-Workstation-Xfce --delete ; \
+	VBoxManage controlvm Whonix-Gateway-Xfce poweroff; \
+	VBoxManage controlvm Whonix-Workstation-Xfce poweroff; \
+	VBoxManage controlvm kali_over_tor poweroff; \
+	VBoxManage unregistervm Whonix-Gateway-Xfce --delete; \
+	VBoxManage unregistervm Whonix-Workstation-Xfce --delete; \
 	VBoxManage unregistervm kali_over_tor --delete
 
 .PHONY: clean
